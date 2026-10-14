@@ -6,11 +6,11 @@
 
 **Install, update and archive apps from GitHub releases — the Arch way.**
 
-A small GTK4 app for Arch Linux (CachyOS, EndeavourOS, Manjaro …) that keeps apps published
-as GitHub releases installed and up to date, as real pacman packages or as AppImages, and
-keeps the last few versions in an offline archive so you can install or roll back without
-a network. Ships with the [Craft App Suite](https://getartcraft.com/apps) (PhotoCraft,
-LightCraft, FilmCraft …) as default repositories; add any other repository you like.
+A small GTK4 update manager for Arch Linux (CachyOS, EndeavourOS, Manjaro …) that keeps apps
+published as GitHub releases installed and up to date — as real pacman packages or as
+AppImages — and keeps the last few versions in an offline archive, so you can install or roll
+back without a network. Ships with the Idus apps and the [Craft App Suite](https://getartcraft.com/apps)
+(PhotoCraft, VectorCraft, FilmCraft …) as default repositories; add any other repository you like.
 
 ![Platform](https://img.shields.io/badge/platform-Arch%20Linux-informational)
 ![Desktop](https://img.shields.io/badge/desktop-KDE%20Plasma%206-blue)
@@ -18,6 +18,15 @@ LightCraft, FilmCraft …) as default repositories; add any other repository you
 ![Formats](https://img.shields.io/badge/formats-pacman%20%7C%20AppImage-orange)
 
 </div>
+
+## Quick install
+
+```bash
+sudo pacman -S --needed python-gobject gtk4 base-devel && bash <(curl -fsSL https://github.com/Idus/idus-github-updater/releases/latest/download/install-idus-github-updater.sh)
+```
+
+Then open **Idus GitHub Updater** from the menu and install the rest from there.
+Want to read the script first? See [Install](#install).
 
 <!-- Add a screenshot here once you have one:
 ![Screenshot](docs/screenshot.png)
@@ -41,18 +50,12 @@ of the last versions on disk — or on your NAS — for offline installs and rol
 
 ## Install
 
-One line — installs the dependencies and the latest release:
-
-```bash
-sudo pacman -S --needed python-gobject gtk4 base-devel && bash <(curl -fsSL https://github.com/Idus/idus-github-updater/releases/latest/download/install-idus-github-updater.sh)
-```
-
-Then install the other apps — Idus SC Toolbox, Idus Elgato Light, the Craft suite … — from
-inside the updater.
+The [one-liner above](#quick-install) installs the dependencies and the latest release.
+It runs `install-idus-github-updater.sh` from the latest release, which then fetches the app
+itself — the same script you get in the release.
 
 Prefer to read before you run? Download the three files from [Releases](../../releases),
-put them in one folder and run `bash install-idus-github-updater.sh`. (The one-liner runs the
-same script, which then fetches the app from the latest release.)
+put them in one folder and run `bash install-idus-github-updater.sh`.
 
 - Launch from the menu ("Idus GitHub Updater") or the terminal (`idus-github-updater`).
 - Right-click the menu entry for **Check for updates**, **Update all** and **Sync offline
@@ -60,13 +63,39 @@ same script, which then fetches the app from the latest release.)
 - Re-running the installer updates the app and keeps your settings.
 - New icon not showing? Log out/in — the KDE icon cache is stubborn.
 
+## Included repositories
+
+The list starts with these. Nothing is installed until you press **Install** — and anything you
+don't want can go: **⋯ › Hide** keeps it out of sight (Settings › *Show hidden repositories*
+brings it back), **⋯ › Remove from list…** takes it off, and Settings › *Restore default
+repositories* puts removed ones back. Add any other repository with **Add repository…**.
+
+**Idus apps**
+
+| App | What it is |
+|---|---|
+| [Idus GitHub Updater](https://github.com/Idus/idus-github-updater) | This app — it keeps itself up to date too |
+| [Idus SC Toolbox](https://github.com/Idus/idus-sc-toolbox) | One-click fixes for Star Citizen on Linux (LUG Helper companion) |
+| [Idus Elgato Light](https://github.com/Idus/idus-elgato-light) | Elgato Key Light, Ring Light and Light Strip control on Linux, with OpenDeck shortcuts |
+| [Idus HW-player](https://github.com/Idus/idus-hw-player) | Random Halloween videos on a Raspberry Pi + projector — *archive only* here |
+
+**[Craft App Suite](https://getartcraft.com/apps)** — free, open-source creative apps from the ArtCraft team
+
+| App | What it is | App | What it is |
+|---|---|---|---|
+| [PhotoCraft](https://github.com/storytold/photocraft) | Image editing, layers, PSD | [WordCraft](https://github.com/storytold/wordcraft) | Word processing |
+| [LightCraft](https://github.com/storytold/lightcraft) | Photo library and raw development | [DeckCraft](https://github.com/storytold/deckcraft) | Presentations |
+| [FilmCraft](https://github.com/storytold/filmcraft) | Video editing, colour and sound | [GridCraft](https://github.com/storytold/gridcraft) | Spreadsheets |
+| [DesignCraft](https://github.com/storytold/designcraft) | Page layout and publishing | [CADCraft](https://github.com/storytold/cadcraft) | Computer-aided design |
+| [VectorCraft](https://github.com/storytold/vectorcraft) | Vector illustration | [SoundCraft](https://github.com/storytold/soundcraft) | Audio recording and editing |
+| [PdfCraft](https://github.com/storytold/pdfcraft) | Reading, organising and protecting PDFs | [FigCraft](https://github.com/storytold/figcraft) | Interface design and prototyping |
+| [EffectCraft](https://github.com/storytold/effectcraft) | Motion graphics and visual effects | | |
+
 ## How it works
 
-### Idus apps first
+### Idus apps
 
-The list starts with the Idus apps — Idus GitHub Updater itself, Idus SC Toolbox, Idus Elgato
-Light and Idus HW-player — followed by the Craft App Suite. Idus apps use the **Idus installer**
-format: the release's own files (`<app>.py`, `<app>.png`, `install-<app>.sh`) are downloaded,
+Idus apps use the **Idus installer** format: the release's own files (`<app>.py`, `<app>.png`, `install-<app>.sh`) are downloaded,
 checked against their SHA-256 and `install-<app>.sh` is run as you (no root), exactly as if you
 had downloaded the three files yourself. The installed version is read from the app itself
 (`APP_VERSION` in `~/.local/share/<app>/<app>.py`), so apps you installed by hand are recognised.
@@ -211,8 +240,8 @@ idus-github-updater --check | --list | --sync | --update-all \
 
 - **Arch only for the pacman format.** AppImages work on any distro, but the app is built and
   tested for Arch.
-- **The Craft apps are early** (v0.1.x at the time of writing) and some have no stable
-  release yet — switch those to *Latest* if you want the pre-releases.
+- **The Craft apps are young** (pre-1.0 at the time of writing) and move fast; some have no
+  stable release yet — switch those to *Latest* if you want the pre-releases.
 - **AppImageLauncher users:** keep the AppImage folder away from `~/Applications`, or
   AppImageLauncher adds a second menu entry for every app.
 - **Rate limits:** without a token GitHub allows 60 API requests an hour; a check uses one per
