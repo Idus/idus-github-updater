@@ -28,9 +28,8 @@ sudo pacman -S --needed python-gobject gtk4 base-devel && bash <(curl -fsSL http
 Then open **Idus GitHub Updater** from the menu and install the rest from there.
 Want to read the script first? See [Install](#install).
 
-<!-- Add a screenshot here once you have one:
+Add a screenshot here once you have one:
 ![Screenshot](docs/screenshot.png)
--->
 
 ## Why
 
