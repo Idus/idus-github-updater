@@ -1,12 +1,28 @@
 #!/usr/bin/env bash
-# Idus GitHub Updater installer  ·  v1.2  ·  build 2026-10-14
+# Idus GitHub Updater installer  ·  v1.3  ·  build 2026-10-14
 # Installs Idus GitHub Updater (GTK4) as a self-contained folder in ~/.local/share/idus-github-updater
 # + a start-menu entry with icon and right-click actions.
 # Your settings and install records live in that folder and are never touched by a re-install.
-# Run:  bash install-idus-github-updater.sh
+# Run:  bash install-idus-github-updater.sh          (next to the downloaded files)
+#  or:  bash <(curl -fsSL https://github.com/Idus/idus-github-updater/releases/latest/download/install-idus-github-updater.sh)
 set -e
-SRC="$(cd "$(dirname "$0")" && pwd)"
+SRC="$(cd "$(dirname "$0")" 2>/dev/null && pwd || pwd)"
 APP="$HOME/.local/share/idus-github-updater"
+
+# One-line install: without the app next to this script, fetch it from the latest GitHub release
+if [ ! -f "$SRC/idus-github-updater.py" ]; then
+    BASE="${IGU_DOWNLOAD_BASE:-https://github.com/Idus/idus-github-updater/releases/latest/download}"
+    command -v curl >/dev/null 2>&1 || { echo "❌ curl is needed:  sudo pacman -S --needed curl"; exit 1; }
+    TMP="$(mktemp -d)"
+    trap 'rm -rf "$TMP"' EXIT
+    echo "⬇️  downloading Idus GitHub Updater (latest release) …"
+    curl -fsSL "$BASE/idus-github-updater.py" -o "$TMP/idus-github-updater.py" || \
+        { echo "❌ download failed — check your connection, or download the files from GitHub"; exit 1; }
+    curl -fsL "$BASE/idus-github-updater.png" -o "$TMP/idus-github-updater.png" || true
+    head -n 5 "$TMP/idus-github-updater.py" | grep -q "Idus GitHub Updater" || \
+        { echo "❌ that download isn't Idus GitHub Updater — stopping"; exit 1; }
+    SRC="$TMP"
+fi
 BIN="$HOME/.local/bin"
 ICONS="$HOME/.local/share/icons/hicolor/512x512/apps"
 

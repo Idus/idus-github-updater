@@ -4,6 +4,14 @@ All notable changes to Idus GitHub Updater are documented here. The format is ba
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3] – 2026-10-14
+
+### Added
+- The repository name under each app (e.g. `storytold/photocraft`) is a link — click it to open
+  the repository on GitHub in your browser. (⋯ › Open on GitHub still goes straight to the releases.)
+- One-line install: `bash <(curl -fsSL …/releases/latest/download/install-idus-github-updater.sh)`.
+  Run without the app next to it, the installer fetches the app and icon from the latest release.
+
 ## [1.2] – 2026-10-14
 
 ### Added

@@ -41,12 +41,18 @@ of the last versions on disk — or on your NAS — for offline installs and rol
 
 ## Install
 
-Download the three files (or grab them from [Releases](../../releases)), put them in one
-folder, then run:
+One line — installs the dependencies and the latest release:
 
 ```bash
-bash install-idus-github-updater.sh
+sudo pacman -S --needed python-gobject gtk4 base-devel && bash <(curl -fsSL https://github.com/Idus/idus-github-updater/releases/latest/download/install-idus-github-updater.sh)
 ```
+
+Then install the other apps — Idus SC Toolbox, Idus Elgato Light, the Craft suite … — from
+inside the updater.
+
+Prefer to read before you run? Download the three files from [Releases](../../releases),
+put them in one folder and run `bash install-idus-github-updater.sh`. (The one-liner runs the
+same script, which then fetches the app from the latest release.)
 
 - Launch from the menu ("Idus GitHub Updater") or the terminal (`idus-github-updater`).
 - Right-click the menu entry for **Check for updates**, **Update all** and **Sync offline
@@ -174,7 +180,8 @@ The AppImage format needs no password at all.
 | | Channel · Format · Archive · Keep | Per-app settings, saved at once |
 | | ⋯ › Release notes | Notes of the latest releases |
 | | ⋯ › Install another version… | Any known version — archived ones (📦) offline. *Install & pin* stays there |
-| | ⋯ › Open on GitHub / Open archive folder | |
+| | Repository name (under the app name) | Opens the repository on GitHub in your browser |
+| | ⋯ › Open on GitHub / Open archive folder | Straight to the releases page / the app's archive folder |
 | | ⋯ › Delete archived files… / Uninstall… | The archive and the install are separate — removing one keeps the other |
 | | ⋯ › Remove the other install… | Removes a copy installed another way (Flatpak, AUR, loose AppImage); yours stays |
 | | ⋯ › Hide / Remove from list… | Hide keeps the app's settings; Remove takes it off the list |

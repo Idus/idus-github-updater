@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ─────────────────────────────────────────────────────────────────────────────
-#  Idus GitHub Updater  ·  v1.2  ·  build 2026-10-14
+#  Idus GitHub Updater  ·  v1.3  ·  build 2026-10-14
 #  (bump APP_VERSION + BUILD below and this line together on every update)
 # ─────────────────────────────────────────────────────────────────────────────
 """
@@ -56,7 +56,7 @@ from pathlib import Path
 APP_NAME = "Idus GitHub Updater"
 APP_SLUG = "idus-github-updater"
 APP_ID = "se.wolfpack.idusgithubupdater"
-APP_VERSION = "1.2"
+APP_VERSION = "1.3"
 BUILD = "2026-10-14"  # keep in sync with the header comment at the top of this file
 REPO_URL = "https://github.com/Idus/idus-github-updater"
 KOFI_URL = "https://ko-fi.com/N4N2QZHKK"
@@ -2077,6 +2077,7 @@ def gui():
             names = Gtk.Box(orientation=V, hexpand=True, valign=Gtk.Align.CENTER)
             self.name_lbl = label("", "repo-name")
             self.sub_lbl = label("", "repo-sub", ellipsize=Pango.EllipsizeMode.END)
+            self.sub_lbl.connect("activate-link", lambda _l, uri: (open_uri(uri), True)[1])
             names.append(self.name_lbl)
             names.append(self.sub_lbl)
             l1.append(names)
@@ -2255,8 +2256,10 @@ def gui():
             if not s:
                 return
             e = self.entry
-            sub = e["repo"] + (f" · {e['group']}" if e.get("group") else "") + (" · hidden" if e.get("hidden") else "")
-            self.sub_lbl.set_label(sub)
+            esc = GLib.markup_escape_text
+            rest = (f" · {e['group']}" if e.get("group") else "") + (" · hidden" if e.get("hidden") else "")
+            self.sub_lbl.set_markup(f'<a href="https://github.com/{esc(e["repo"])}" title="Open on GitHub">'
+                                    f'{esc(e["repo"])}</a>{esc(rest)}')
             for c in ("ok", "warn", "crit", "muted"):
                 self.state_lbl.remove_css_class(c)
             self.act_btn.remove_css_class("primary")
@@ -2866,6 +2869,8 @@ def gui():
             list.repolist > row.reporow:hover {{ background-color: #262c38; }}
             .repo-name {{ font-size: {int(15*S)}px; font-weight: 700; color: #e8eaed; }}
             .repo-sub {{ font-size: {int(11*S)}px; color: #8a93a3; }}
+            .repo-sub link {{ color: #9fb4d4; }}
+            .repo-sub link:hover {{ color: #ff9a3c; }}
             .field {{ font-size: {int(11*S)}px; color: #8a93a3; }}
             .state {{ font-family: monospace; font-size: {int(12*S)}px; }}
             .ok {{ color: #46d160; }}
