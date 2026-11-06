@@ -4,6 +4,23 @@ All notable changes to Idus GitHub Updater are documented here. The format is ba
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4] – 2026-11-06
+
+### Changed
+- New look, the same as Idus SC Toolbox (the Idus visual style):
+  - Saira title with the icon beside it, and a clearer version line (larger, semi-bold, soft blue).
+  - Group headings get an orange number ring ("1 · Repositories", "2 · Actions").
+  - The check status is a pill: green when everything is up to date, amber when updates are
+    waiting, grey when not checked yet or offline.
+  - IBM Plex Sans for text and JetBrains Mono for versions and the log; the log sits in a framed box.
+  - Buttons, check boxes and menus stay dark on every GTK theme (some themes painted them white).
+
+### Added
+- A big primary button top right: **⟳ CHECK NOW** when everything is up to date, **↑ UPDATE ALL**
+  (with the number of updates) when updates are waiting.
+- The installer downloads the three fonts to `~/.local/share/fonts/idus` when they are missing
+  (no sudo, SIL Open Font License).
+
 ## [1.3] – 2026-10-14
 
 ### Added

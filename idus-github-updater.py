@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ─────────────────────────────────────────────────────────────────────────────
-#  Idus GitHub Updater  ·  v1.3  ·  build 2026-10-14
+#  Idus GitHub Updater  ·  v1.4  ·  build 2026-11-06
 #  (bump APP_VERSION + BUILD below and this line together on every update)
 # ─────────────────────────────────────────────────────────────────────────────
 """
@@ -56,8 +56,8 @@ from pathlib import Path
 APP_NAME = "Idus GitHub Updater"
 APP_SLUG = "idus-github-updater"
 APP_ID = "se.wolfpack.idusgithubupdater"
-APP_VERSION = "1.3"
-BUILD = "2026-10-14"  # keep in sync with the header comment at the top of this file
+APP_VERSION = "1.4"
+BUILD = "2026-11-06"  # keep in sync with the header comment at the top of this file
 REPO_URL = "https://github.com/Idus/idus-github-updater"
 KOFI_URL = "https://ko-fi.com/N4N2QZHKK"
 
@@ -2330,7 +2330,7 @@ def gui():
     class Win(Gtk.ApplicationWindow):
         def __init__(self, app):
             super().__init__(application=app, title=APP_NAME)
-            self.set_default_size(sc(830), sc(940))
+            self.set_default_size(sc(960), sc(940))  # room for the title + primary button
             try:
                 st = Gtk.Settings.get_default()
                 if any(pr.name == "gtk-interface-color-scheme" for pr in st.list_properties()):
@@ -2352,21 +2352,28 @@ def gui():
             outer.set_child(root)
             self.set_child(outer)
 
-            hb = Gtk.Box(orientation=V, spacing=sc(4), halign=Gtk.Align.CENTER)
+            # Header (Idus visual style): icon beside title + version line, primary action on the right
+            hb = Gtk.Box(orientation=H, spacing=sc(16), halign=Gtk.Align.CENTER)
             if ICON_FILE.exists():
                 logo = Gtk.Image.new_from_file(str(ICON_FILE))
                 logo.set_pixel_size(sc(85))
                 hb.append(logo)
-            hb.append(label(APP_NAME, "app-title", xalign=0.5))
-            hb.append(label(f"v{APP_VERSION} · {BUILD}", "app-ver", xalign=0.5))
-            root.append(hb)
+            tb = Gtk.Box(orientation=V, spacing=sc(8), valign=Gtk.Align.CENTER)
+            tb.append(label(APP_NAME, "app-title"))
+            tb.append(label(f"V{APP_VERSION} · BUILD {BUILD}", "app-ver"))
+            hb.append(tb)
+            header = Gtk.CenterBox()
+            header.set_center_widget(hb)
+            header.set_end_widget(self._primary_button())
+            root.append(header)
 
             top = Gtk.Box(orientation=H, spacing=sc(8))
-            top.append(label("Show:", valign=Gtk.Align.CENTER))
+            top.append(label("Show:", "env-lbl", valign=Gtk.Align.CENTER))
             self.filter_dd = Gtk.DropDown.new_from_strings(FILTERS)
             self.filter_dd.connect("notify::selected", lambda *_: self.apply_filter())
             top.append(self.filter_dd)
-            self.status = label("", "status", xalign=1.0, hexpand=True, valign=Gtk.Align.CENTER)
+            top.append(Gtk.Box(hexpand=True))
+            self.status = label("", "pill", "pill-idle", xalign=0.5, valign=Gtk.Align.CENTER)
             top.append(self.status)
             root.append(top)
 
@@ -2400,6 +2407,8 @@ def gui():
                                          wrap_mode=Gtk.WrapMode.WORD_CHAR)
             self.log_view.add_css_class("logbox")
             lsw = Gtk.ScrolledWindow()
+            lsw.add_css_class("logwrap")
+            lsw.set_overflow(Gtk.Overflow.HIDDEN)
             lsw.set_min_content_height(sc(110))
             lsw.set_child(self.log_view)
             root.append(lsw)
@@ -2421,8 +2430,18 @@ def gui():
 
         # ---- plumbing
         def _frame(self, root, title, child, vexpand=False):
-            frame = Gtk.Frame(label=title, vexpand=vexpand)
+            """Framed group. "1 · Name" becomes an orange number ring + title (Idus visual style)."""
+            frame = Gtk.Frame(vexpand=vexpand)
             frame.add_css_class("group")
+            num, _, name = title.partition(" · ")
+            if not name:
+                num, name = "", title
+            head = Gtk.Box(orientation=H, spacing=sc(8))
+            head.add_css_class("group-head")
+            if num:
+                head.append(label(num, "group-num", xalign=0.5, valign=Gtk.Align.CENTER))
+            head.append(label(name, "group-title", valign=Gtk.Align.CENTER))
+            frame.set_label_widget(head)
             frame.set_child(child)
             root.append(frame)
             return frame
@@ -2455,7 +2474,8 @@ def gui():
             for r in self.rows.values():
                 r.update(r.status)
             if busy:
-                self.status.set_label("⏳ working …")
+                self._set_pill("○  working …", "idle")
+                self.primary_sub.set_label("working …")
 
         def run_job(self, fn, after=None):
             if self.busy:
@@ -2543,15 +2563,56 @@ def gui():
             ups = sum(1 for r in self.rows.values() if r.status and r.status.get("update")
                       and not r.entry.get("hidden"))
             last = ST.get("last_check") or 0
+            self._set_primary(ups)
             if not last:
-                self.status.set_label("⚪ not checked yet")
+                self._set_pill("○  not checked yet", "idle")
                 return
             t = dt.datetime.fromtimestamp(last)
             when = t.strftime("%H:%M") if t.date() == dt.date.today() else t.strftime("%d %b %H:%M")
+            n = f"{ups} update{'s' if ups != 1 else ''}"
             if ST.get("online", True):
-                self.status.set_label(f"🟢 checked {when} · {ups} update{'s' if ups != 1 else ''}")
+                self._set_pill(f"●  checked {when} · {n}", "warn" if ups else "ok")
             else:
-                self.status.set_label(f"⚪ offline · cached data from {when} · {ups} update{'s' if ups != 1 else ''}")
+                self._set_pill(f"○  offline · cached data from {when} · {n}", "idle")
+
+        def _set_pill(self, text, state):
+            self.status.set_label(text)
+            for s in ("ok", "warn", "idle"):
+                self.status.remove_css_class(f"pill-{s}")
+            self.status.add_css_class(f"pill-{state}")
+
+        def _primary_button(self):
+            """Big primary action, top right: Update all when updates are waiting, else Check now."""
+            self.primary_btn = Gtk.Button(valign=Gtk.Align.CENTER)
+            self.primary_btn.add_css_class("primary")
+            self.primary_btn.add_css_class("primary-main")
+            box = Gtk.Box(orientation=V, spacing=sc(1))
+            self.primary_big = label("⟳  CHECK NOW", "primary-big", xalign=0.5)
+            self.primary_sub = label("not checked yet", "primary-sub", xalign=0.5)
+            box.append(self.primary_big)
+            box.append(self.primary_sub)
+            self.primary_btn.set_child(box)
+            self._primary_ups = 0
+            self.primary_btn.connect("clicked", lambda _w: self._primary_clicked())
+            self._buttons.append(self.primary_btn)
+            return self.primary_btn
+
+        def _set_primary(self, ups):
+            self._primary_ups = ups
+            if ups:
+                self.primary_big.set_label("↑  UPDATE ALL")
+                self.primary_sub.set_label(f"{ups} update{'s' if ups != 1 else ''} ready")
+                self.primary_btn.set_tooltip_text("Install every update shown — all pacman packages in one password prompt")
+            else:
+                self.primary_big.set_label("⟳  CHECK NOW")
+                self.primary_sub.set_label("everything up to date" if ST.get("last_check") else "not checked yet")
+                self.primary_btn.set_tooltip_text("Ask GitHub for new releases")
+
+        def _primary_clicked(self):
+            if self._primary_ups:
+                self.run_job(lambda lg: act_update_all(lg))
+            else:
+                self.run_job(self._check_job)
 
         def _filter(self, row):
             r = self.rows.get(row.get_name())
@@ -2825,64 +2886,96 @@ def gui():
 
         def _install_css(self):
             f = int(round(13 * S))
+            # Idus visual style (same tokens and components as Idus SC Toolbox v1.3.5)
+            C = dict(bg="#16181d", surface="#1e222b", deep="#0f1115", line="#2a2f3a",
+                     fg="#e8eaed", muted="#8a93a3", soft="#9fb4d4", title="#ffd9a0",
+                     accent="#ff9a3c", ok="#46d160", warn="#ffb13c", error="#e0525b",
+                     btn="#262b36", btn_hover="#2f3644", log="#c7d1df", dim="#5a6270")
+            DISPLAY = '"Saira", "Segoe UI", sans-serif'
+            BODY = '"IBM Plex Sans", "Noto Sans", sans-serif'
+            MONO = '"JetBrains Mono", "DejaVu Sans Mono", monospace'
             css = f"""
-            window {{ background-color: #16181d; color: #e8eaed; font-size: {f}px; }}
-            .app-title {{ font-size: {int(28*S)}px; font-weight: 800; letter-spacing: 0.5px; color: #ffd9a0; }}
-            .app-ver {{ font-size: {int(11*S)}px; color: #8a93a3; margin-top: -{sc(2)}px; }}
-            .foot {{ font-size: {int(11*S)}px; color: #8a93a3; margin-top: {sc(4)}px; }}
-            .foot a, .foot link {{ color: #ff9a3c; text-decoration: none; }}
-            .status {{ color: #9fb4d4; }}
-            frame.group > label {{ font-size: {int(13*S)}px; font-weight: 700; color: #8a93a3;
-                                   margin-left: {sc(4)}px; }}
-            frame.group {{ background-color: #1e222b; border-radius: {sc(12)}px;
-                           border: 1px solid #2a2f3a; }}
-            button {{ background-color: #262b36; background-image: none; color: #e8eaed; border-radius: {sc(8)}px;
-                      border: 1px solid #333a47; padding: {sc(9)}px {sc(10)}px; box-shadow: none; }}
-            button:hover {{ background-color: #2f3644; }}
-            button:disabled {{ color: #5a6270; background-color: #20242d; }}
-            button.primary {{ background-color: #ff9a3c; color: #16181d; font-weight: 700; border-color: #ff9a3c; }}
-            button.primary:hover {{ background-color: #ffb066; }}
-            button.primary:disabled {{ background-color: #6b5338; color: #16181d; border-color: #6b5338; }}
+            window {{ background-color: {C['bg']}; color: {C['fg']}; font-family: {BODY}; font-size: {f}px; }}
+            .app-title {{ font-family: {DISPLAY}; font-size: {int(30*S)}px; font-weight: 700;
+                          letter-spacing: 0.3px; color: {C['title']}; padding-bottom: {sc(2)}px; }}
+            .app-ver {{ font-family: {MONO}; font-size: {int(13*S)}px; font-weight: 600;
+                        letter-spacing: 1px; color: {C['soft']}; }}
+            .env-lbl {{ color: {C['muted']}; }}
+            .pill {{ font-size: {int(12*S)}px; padding: {sc(3)}px {sc(10)}px; border-radius: 999px;
+                     border: 1px solid {C['line']}; background-color: {C['surface']}; }}
+            .pill-ok {{ color: {C['ok']}; border-color: {C['ok']}; }}
+            .pill-warn {{ color: {C['warn']}; border-color: {C['warn']}; }}
+            .pill-idle {{ color: {C['muted']}; }}
+            .foot {{ font-size: {int(11*S)}px; color: {C['muted']}; margin-top: {sc(4)}px; }}
+            .foot link, .foot link:visited, .foot link:hover {{ color: {C['accent']}; }}
+            frame.group {{ background-color: {C['surface']}; border-radius: {sc(12)}px; border: 1px solid {C['line']}; }}
+            .group-head {{ margin: {sc(8)}px {sc(4)}px {sc(2)}px {sc(4)}px; }}
+            .group-num {{ font-family: {MONO}; font-weight: 600; font-size: {int(12*S)}px; color: {C['accent']};
+                          border: 1.5px solid {C['accent']}; border-radius: 999px;
+                          min-width: {sc(22)}px; min-height: {sc(22)}px; }}
+            .group-title {{ font-size: {int(14*S)}px; font-weight: 600; color: {C['fg']}; }}
+            button {{ background-color: {C['btn']}; background-image: none; box-shadow: none; text-shadow: none;
+                      color: {C['fg']}; border-radius: {sc(8)}px; border: 1px solid {C['line']};
+                      padding: {sc(9)}px {sc(10)}px; }}
+            button:hover {{ background-color: {C['btn_hover']}; }}
+            button:active {{ background-color: {C['line']}; }}
+            button:focus-visible {{ outline: 2px solid {C['accent']}; outline-offset: 2px; }}
+            button:disabled {{ color: {C['dim']}; background-color: #20242d; }}
+            button.primary {{ background-color: {C['accent']}; color: {C['bg']}; font-weight: 700; border-color: {C['accent']}; }}
+            button.primary:hover {{ background-color: #ffad5c; }}
+            button.primary:disabled {{ background-color: #6b5338; color: {C['bg']}; border-color: #6b5338; }}
+            button.primary-main {{ border-radius: {sc(12)}px; padding: {sc(10)}px {sc(26)}px; }}
+            .primary-big {{ font-family: {DISPLAY}; font-weight: 700; font-size: {int(20*S)}px; letter-spacing: 1px; }}
+            .primary-sub {{ font-family: {MONO}; font-size: {int(10*S)}px; font-weight: 500; }}
             button.rowbtn {{ padding: {sc(6)}px {sc(16)}px; min-width: {sc(86)}px; }}
             button.menuitem {{ background: transparent; border: none; padding: {sc(6)}px {sc(12)}px; }}
-            button.menuitem:hover {{ background-color: #2f3644; }}
+            button.menuitem:hover {{ background-color: {C['btn_hover']}; }}
             menubutton.rowmenu > button {{ padding: {sc(3)}px {sc(12)}px; font-weight: 800; }}
             dropdown > button {{ padding: {sc(4)}px {sc(8)}px; }}
-            spinbutton, entry, passwordentry {{ background-color: #0f1115; color: #e8eaed;
-                      border: 1px solid #333a47; border-radius: {sc(8)}px; }}
+            spinbutton, entry, passwordentry {{ background-color: {C['deep']}; color: {C['fg']};
+                      border: 1px solid {C['line']}; border-radius: {sc(8)}px; }}
             entry, passwordentry {{ padding: {sc(4)}px {sc(8)}px; }}
             spinbutton > button, spinbutton > button:disabled {{ padding: {sc(2)}px {sc(7)}px; border: none;
                       background-color: transparent; }}
             spinbutton > text {{ min-width: {sc(22)}px; }}
-            popover > contents {{ background-color: #1e222b; color: #e8eaed; border: 1px solid #2a2f3a;
+            popover > contents {{ background-color: {C['surface']}; color: {C['fg']}; border: 1px solid {C['line']};
                                   border-radius: {sc(10)}px; }}
-            popover > arrow {{ background-color: #1e222b; border-color: #2a2f3a; }}
-            popover listview, popover listview > row {{ background-color: transparent; color: #e8eaed; }}
-            popover listview > row:hover {{ background-color: #2f3644; }}
+            popover > arrow {{ background-color: {C['surface']}; border-color: {C['line']}; }}
+            popover listview, popover listview > row {{ background-color: transparent; color: {C['fg']}; }}
+            popover listview > row:hover {{ background-color: {C['btn_hover']}; }}
+            window.dialog, window.messagedialog, messagedialog {{ background-color: {C['surface']}; color: {C['fg']}; }}
+            button.suggested-action, button.default {{ background-color: {C['accent']}; color: {C['bg']};
+                                                     border-color: {C['accent']}; }}
             scrollbar {{ background-color: transparent; border: none; }}
             scrollbar slider {{ margin: 0; min-width: {sc(6)}px; min-height: {sc(6)}px;
                                 border: none; border-radius: {sc(4)}px; background-color: #3a4150; }}
             scrollbar slider:hover {{ background-color: #4a5366; }}
             list.repolist {{ background-color: transparent; }}
             list.repolist > row.reporow {{ background-color: #232833; border-radius: {sc(10)}px;
-                                           border: 1px solid #2a2f3a; margin: {sc(3)}px {sc(2)}px; }}
+                                           border: 1px solid {C['line']}; margin: {sc(3)}px {sc(2)}px; }}
             list.repolist > row.reporow:hover {{ background-color: #262c38; }}
-            .repo-name {{ font-size: {int(15*S)}px; font-weight: 700; color: #e8eaed; }}
-            .repo-sub {{ font-size: {int(11*S)}px; color: #8a93a3; }}
-            .repo-sub link {{ color: #9fb4d4; }}
-            .repo-sub link:hover {{ color: #ff9a3c; }}
-            .field {{ font-size: {int(11*S)}px; color: #8a93a3; }}
-            .state {{ font-family: monospace; font-size: {int(12*S)}px; }}
-            .ok {{ color: #46d160; }}
-            .warn {{ color: #ffb13c; }}
-            .crit {{ color: #e0525b; }}
-            .muted {{ color: #8a93a3; }}
-            .note {{ font-size: {int(11*S)}px; color: #9fb4d4; }}
-            .logbox, .logbox text {{ background-color: #0f1115; color: #c7d1df; }}
-            .logbox {{ padding: {sc(8)}px; border-radius: {sc(8)}px; }}
-            checkbutton {{ color: #9fb4d4; font-size: {int(12*S)}px; }}
-            .dlg-title {{ font-size: {int(18*S)}px; font-weight: 800; color: #ffd9a0; }}
-            .dlg-help {{ font-size: {int(11*S)}px; color: #8a93a3; }}
+            .repo-name {{ font-size: {int(15*S)}px; font-weight: 600; color: {C['fg']}; }}
+            .repo-sub {{ font-size: {int(11*S)}px; color: {C['muted']}; }}
+            .repo-sub link {{ color: {C['soft']}; }}
+            .repo-sub link:hover {{ color: {C['accent']}; }}
+            .field {{ font-size: {int(11*S)}px; color: {C['muted']}; }}
+            .state {{ font-family: {MONO}; font-size: {int(12*S)}px; font-weight: 600; }}
+            .ok {{ color: {C['ok']}; }}
+            .warn {{ color: {C['warn']}; }}
+            .crit {{ color: {C['error']}; }}
+            .muted {{ color: {C['muted']}; }}
+            .note {{ font-size: {int(11*S)}px; color: {C['soft']}; }}
+            .logwrap {{ border: 1px solid {C['line']}; border-radius: {sc(8)}px; background-color: {C['deep']}; }}
+            .logbox, .logbox text {{ background-color: {C['deep']}; color: {C['log']}; }}
+            .logbox {{ font-family: {MONO}; font-size: {int(12*S)}px; padding: {sc(8)}px; }}
+            .logbox text selection {{ background-color: alpha({C['accent']}, 0.35); }}
+            checkbutton {{ color: {C['soft']}; font-size: {int(12*S)}px; }}
+            checkbutton check {{ background-color: {C['deep']}; background-image: none;
+                                 border: 1px solid {C['line']}; box-shadow: none; }}
+            checkbutton check:checked {{ background-color: {C['accent']}; border-color: {C['accent']};
+                                         color: {C['bg']}; }}
+            .dlg-title {{ font-family: {DISPLAY}; font-size: {int(18*S)}px; font-weight: 700; color: {C['title']}; }}
+            .dlg-help {{ font-size: {int(11*S)}px; color: {C['muted']}; }}
             """
             provider = Gtk.CssProvider()
             provider.load_from_data(css.encode())

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Idus GitHub Updater installer  ·  v1.3  ·  build 2026-10-14
+# Idus GitHub Updater installer  ·  v1.4  ·  build 2026-11-06
 # Installs Idus GitHub Updater (GTK4) as a self-contained folder in ~/.local/share/idus-github-updater
 # + a start-menu entry with icon and right-click actions.
 # Your settings and install records live in that folder and are never touched by a re-install.
@@ -37,6 +37,28 @@ if [ -f "$SRC/idus-github-updater.png" ]; then
 else
     echo "⚠️  no idus-github-updater.png next to the script — using a generic update icon."
     ICON_LINE="Icon=system-software-update"
+fi
+
+# Fonts for the Idus look: Saira (title), IBM Plex Sans (text), JetBrains Mono (version line, log).
+# User-level (no sudo), from Google Fonts' GitHub (SIL Open Font License). Skipped when the
+# family is already installed; a failed download is not fatal (the app uses system fonts).
+FONTS="$HOME/.local/share/fonts/idus"
+GF="https://raw.githubusercontent.com/google/fonts/main/ofl"
+FONT_NEW=0
+fetch_font() {  # $1 family  $2 path under ofl/  $3 local file name
+    fc-list : family 2>/dev/null | grep -qi "^$1" && return 0
+    mkdir -p "$FONTS"
+    if curl -fsSL --max-time 60 -o "$FONTS/$3" "$GF/$2"; then
+        echo "   + font: $1"; FONT_NEW=1
+    else
+        rm -f "$FONTS/$3"; echo "⚠️  could not download the $1 font — the app falls back to a system font."
+    fi
+}
+if command -v curl >/dev/null 2>&1 && command -v fc-list >/dev/null 2>&1; then
+    fetch_font "Saira" "saira/Saira%5Bwdth,wght%5D.ttf" "Saira[wdth,wght].ttf"
+    fetch_font "IBM Plex Sans" "ibmplexsans/IBMPlexSans%5Bwdth,wght%5D.ttf" "IBMPlexSans[wdth,wght].ttf"
+    fetch_font "JetBrains Mono" "jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf" "JetBrainsMono[wght].ttf"
+    if [ "$FONT_NEW" = 1 ]; then fc-cache -f "$FONTS" >/dev/null 2>&1 || true; fi
 fi
 
 # PATH wrapper

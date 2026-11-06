@@ -45,6 +45,9 @@ of the last versions on disk — or on your NAS — for offline installs and rol
 - For the **pacman** format: `sudo pacman -S --needed base-devel` (makepkg + fakeroot)
 - Optional: `ksshaskpass` (password prompt that sudo remembers for a few minutes — part of Plasma),
   `libnotify` (desktop notifications), `fuse2` (some AppImages need it to start)
+- Fonts [Saira](https://fonts.google.com/specimen/Saira), [IBM Plex Sans](https://fonts.google.com/specimen/IBM+Plex+Sans)
+  and [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) for the Idus look. The installer downloads
+  any that are missing to `~/.local/share/fonts/idus` (no sudo). Without them the app uses system fonts.
 
 ## Install
 
@@ -265,6 +268,7 @@ Then the updater itself:
 rm -f  ~/.local/bin/idus-github-updater ~/.local/share/applications/idus-github-updater.desktop
 rm -rf ~/.local/share/idus-github-updater ~/.cache/idus-github-updater
 rm -f  ~/.local/share/icons/hicolor/512x512/apps/idus-github-updater.png
+rm -rf ~/.local/share/fonts/idus   # fonts the installer downloaded (skip if other Idus apps use them)
 ```
 
 The offline archive (`~/GitHub-archive`) is yours to keep or delete.
