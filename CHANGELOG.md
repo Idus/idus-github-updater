@@ -4,6 +4,11 @@ All notable changes to Idus GitHub Updater are documented here. The format is ba
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] – 2026-11-06
+
+### Fixed
+- The app icon said "GutHub updater". It now says "GitHub updater" — same colour, size and place.
+
 ## [1.4] – 2026-11-06
 
 ### Changed

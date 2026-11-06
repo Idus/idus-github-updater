@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ─────────────────────────────────────────────────────────────────────────────
-#  Idus GitHub Updater  ·  v1.4  ·  build 2026-11-06
+#  Idus GitHub Updater  ·  v1.4.1  ·  build 2026-11-06
 #  (bump APP_VERSION + BUILD below and this line together on every update)
 # ─────────────────────────────────────────────────────────────────────────────
 """
@@ -56,7 +56,7 @@ from pathlib import Path
 APP_NAME = "Idus GitHub Updater"
 APP_SLUG = "idus-github-updater"
 APP_ID = "se.wolfpack.idusgithubupdater"
-APP_VERSION = "1.4"
+APP_VERSION = "1.4.1"
 BUILD = "2026-11-06"  # keep in sync with the header comment at the top of this file
 REPO_URL = "https://github.com/Idus/idus-github-updater"
 KOFI_URL = "https://ko-fi.com/N4N2QZHKK"

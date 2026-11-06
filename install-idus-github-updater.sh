@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Idus GitHub Updater installer  ·  v1.4  ·  build 2026-11-06
+# Idus GitHub Updater installer  ·  v1.4.1  ·  build 2026-11-06
 # Installs Idus GitHub Updater (GTK4) as a self-contained folder in ~/.local/share/idus-github-updater
 # + a start-menu entry with icon and right-click actions.
 # Your settings and install records live in that folder and are never touched by a re-install.
