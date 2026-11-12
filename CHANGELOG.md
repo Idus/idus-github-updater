@@ -4,6 +4,17 @@ All notable changes to Idus GitHub Updater are documented here. The format is ba
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] – 2026-11-12
+
+### Added
+- **Idus SC Deck** in the list of Idus apps — Star Citizen keys for OpenDeck. The updater runs
+  its installer and reads the installed version from the plugin's `manifest.json` in OpenDeck's
+  plugin folder (native or Flatpak). Quit OpenDeck from its tray icon and start it again after
+  an install or update. Uninstall removes the plugin folder; your key layout stays in OpenDeck.
+
+### Changed
+- `v1.1` and `v1.1.0` count as the same version when the installed version is matched to a release.
+
 ## [1.4.1] – 2026-11-06
 
 ### Fixed

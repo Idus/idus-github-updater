@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ─────────────────────────────────────────────────────────────────────────────
-#  Idus GitHub Updater  ·  v1.4.1  ·  build 2026-11-06
+#  Idus GitHub Updater  ·  v1.4.2  ·  build 2026-11-12
 #  (bump APP_VERSION + BUILD below and this line together on every update)
 # ─────────────────────────────────────────────────────────────────────────────
 """
@@ -56,8 +56,8 @@ from pathlib import Path
 APP_NAME = "Idus GitHub Updater"
 APP_SLUG = "idus-github-updater"
 APP_ID = "se.wolfpack.idusgithubupdater"
-APP_VERSION = "1.4.1"
-BUILD = "2026-11-06"  # keep in sync with the header comment at the top of this file
+APP_VERSION = "1.4.2"
+BUILD = "2026-11-12"  # keep in sync with the header comment at the top of this file
 REPO_URL = "https://github.com/Idus/idus-github-updater"
 KOFI_URL = "https://ko-fi.com/N4N2QZHKK"
 
@@ -87,9 +87,13 @@ FORMAT_LABELS = ["pacman", "AppImage", "Idus installer"]
 # Default repositories, in this order: Idus's own apps first, then the Craft App Suite.
 # Idus apps ship <app>.py + <app>.png + install-<app>.sh as release files; the "Idus installer"
 # format downloads and verifies them and runs install-<app>.sh as you (no root).
+# "opendeck_plugin" marks an OpenDeck plugin: its installed version is the Version in the
+# plugin's manifest.json instead of APP_VERSION in ~/.local/share/<app>/<app>.py.
 IDUS_APPS = [
     ("idus-github-updater", "Idus GitHub Updater", {}),
     ("idus-sc-toolbox", "Idus SC Toolbox", {}),
+    ("idus-sc-deck", "Idus SC Deck", {"opendeck_plugin": "se.wolfpack.idusscdeck",
+                                      "about": "OpenDeck plugin — restart OpenDeck after an update"}),
     ("idus-elgato-light", "Idus Elgato Light", {}),
     ("idus-hw-player", "Idus HW-player", {"archive_only": True,
                                           "about": "Raspberry Pi app — archived here, installed on the Pi"}),
@@ -97,7 +101,7 @@ IDUS_APPS = [
 IDUS_PRESETS = [dict({"repo": f"Idus/{slug}", "name": name, "group": "Idus", "format": "idus",
                       "icon": f"https://raw.githubusercontent.com/Idus/{slug}/main/{slug}.png"}, **extra)
                 for slug, name, extra in IDUS_APPS]
-PRESET_KEYS = ("group", "icon", "archive_only", "about")  # owned by the preset, refreshed on every start
+PRESET_KEYS = ("group", "icon", "archive_only", "about", "opendeck_plugin")  # owned by the preset, refreshed on every start
 
 # The Craft App Suite (https://getartcraft.com/apps)
 CRAFT_APPS = [
@@ -114,7 +118,8 @@ PRESETS = IDUS_PRESETS + [{
 } for app, name in CRAFT_APPS]
 
 REPO_DEFAULTS = {"channel": "stable", "pinned": "", "format": "pacman", "archive": False,
-                 "keep": 0, "hidden": False, "group": "", "icon": "", "archive_only": False, "about": ""}
+                 "keep": 0, "hidden": False, "group": "", "icon": "", "archive_only": False, "about": "",
+                 "opendeck_plugin": ""}
 
 
 def is_idus(entry) -> bool:
@@ -1045,23 +1050,54 @@ def is_running(rec) -> bool:
     return bool(running_pids(exe_paths=rec.get("binaries") or []))
 
 
+# OpenDeck's plugin folders: the native package first, then the Flatpak (same order as the plugins' installers)
+OPENDECK_PLUGIN_DIRS = (Path.home() / ".config/opendeck/plugins",
+                        Path.home() / ".var/app/me.amankhanna.opendeck/config/opendeck/plugins")
+
+
+def opendeck_plugin_dir(entry):
+    """The installed folder of an Idus OpenDeck plugin, or None."""
+    for base in OPENDECK_PLUGIN_DIRS:
+        d = base / f"{entry['opendeck_plugin']}.sdPlugin"
+        if (d / "manifest.json").is_file():
+            return d
+    return None
+
+
+def _vkey(v: str) -> str:
+    """'v1.1.0' and '1.1' are the same version."""
+    return re.sub(r"(\.0)+$", "", v.strip().lstrip("vV"))
+
+
 def idus_installed(entry):
     """An Idus app installed by its own installer lives in ~/.local/share/<app>/<app>.py — its
-    APP_VERSION is the truth, however it got installed (by hand or by the updater)."""
+    APP_VERSION is the truth, however it got installed (by hand or by the updater). An OpenDeck
+    plugin lives in OpenDeck's plugin folder, with the Version in its manifest.json."""
     slug = entry["repo"].split("/")[1]
-    d = _XDG_DATA / slug
-    f = d / f"{slug}.py"
-    try:
-        text = f.read_text(errors="replace")[:30000]
-    except Exception:
-        return None
-    m = re.search(r"^APP_VERSION\s*=\s*[\"']([^\"']+)[\"']", text, re.M)
-    if not m:
-        return None
-    ver = m.group(1)
+    if entry.get("opendeck_plugin"):
+        d = opendeck_plugin_dir(entry)
+        if not d:
+            return None
+        try:
+            ver = str(json.loads((d / "manifest.json").read_text(errors="replace"))["Version"])
+        except Exception:
+            return None
+        rec = {"format": "idus", "path": str(d)}  # no script: OpenDeck runs it, an update never waits for it
+    else:
+        d = _XDG_DATA / slug
+        f = d / f"{slug}.py"
+        try:
+            text = f.read_text(errors="replace")[:30000]
+        except Exception:
+            return None
+        m = re.search(r"^APP_VERSION\s*=\s*[\"']([^\"']+)[\"']", text, re.M)
+        if not m:
+            return None
+        ver = m.group(1)
+        rec = {"format": "idus", "path": str(d), "script": str(f)}
     cache = ST["releases"].get(entry["repo"].lower()) or {}
-    tag = next((r["tag"] for r in cache.get("list") or [] if r["tag"].lstrip("vV") == ver), f"v{ver}")
-    return {"format": "idus", "path": str(d), "script": str(f), "version": tag}
+    tag = next((r["tag"] for r in cache.get("list") or [] if _vkey(r["tag"]) == _vkey(ver)), f"v{ver}")
+    return dict(rec, version=tag)
 
 
 def installed_record(entry, pacq):
@@ -1544,7 +1580,10 @@ def install_appimage(entry, release, src: Path, log) -> dict:
 
 
 def _remove_record_files(rec, log):
-    if rec.get("format") == "idus":
+    if rec.get("format") == "idus" and rec["path"].endswith(".sdPlugin"):  # an OpenDeck plugin
+        shutil.rmtree(rec["path"], ignore_errors=True)
+        log("· quit OpenDeck from its tray icon and start it again (your key layout stays)")
+    elif rec.get("format") == "idus":
         slug = Path(rec["path"]).name
         if slug == APP_SLUG:
             raise InstallError(f"{APP_NAME} can't uninstall itself — see Uninstall in its README")
@@ -1697,6 +1736,13 @@ def run_idus_installer(prep, log) -> dict:
     for f in prep["files"]:
         if Path(f).parent == CACHE_DIR / "downloads":
             Path(f).unlink(missing_ok=True)
+    if entry.get("opendeck_plugin"):
+        log(f"✅ {entry['name']} {tag} installed — quit OpenDeck from its tray icon and start it again")
+        rec = idus_installed(entry)
+        if not rec:
+            raise InstallError(f"{prep['script']} ran, but the plugin is not in OpenDeck's plugin folder")
+        rec.pop("version", None)
+        return rec
     log(f"✅ {entry['name']} {tag} installed" +
         (f" — restart {APP_NAME} to use it" if slug == APP_SLUG else ""))
     return {"format": "idus", "path": str(_XDG_DATA / slug), "script": str(_XDG_DATA / slug / f"{slug}.py")}
