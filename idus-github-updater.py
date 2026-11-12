@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ─────────────────────────────────────────────────────────────────────────────
-#  Idus GitHub Updater  ·  v1.4.2  ·  build 2026-11-12
+#  Idus GitHub Updater  ·  v1.5  ·  build 2026-11-12
 #  (bump APP_VERSION + BUILD below and this line together on every update)
 # ─────────────────────────────────────────────────────────────────────────────
 """
@@ -56,7 +56,7 @@ from pathlib import Path
 APP_NAME = "Idus GitHub Updater"
 APP_SLUG = "idus-github-updater"
 APP_ID = "se.wolfpack.idusgithubupdater"
-APP_VERSION = "1.4.2"
+APP_VERSION = "1.5"
 BUILD = "2026-11-12"  # keep in sync with the header comment at the top of this file
 REPO_URL = "https://github.com/Idus/idus-github-updater"
 KOFI_URL = "https://ko-fi.com/N4N2QZHKK"
@@ -139,6 +139,7 @@ DEFAULT_SETTINGS = {
     "require_checksum": True,
     "github_token": "",
     "show_hidden": False,
+    "custom_order": False,  # True once you have moved a repository: your order is kept from then on
     "removed_presets": [],
     "repos": [],
 }
@@ -222,7 +223,7 @@ def load_settings() -> dict:
     removed = {x.lower() for x in s.get("removed_presets", [])}
     for p in PRESETS:  # new presets in later versions show up automatically
         if p["repo"].lower() not in have and p["repo"].lower() not in removed:
-            s["repos"].append(dict(p))
+            place_entry(s["repos"], dict(p), s.get("custom_order"))
     by_repo = {p["repo"].lower(): p for p in PRESETS}
     for r in s["repos"]:
         for k, v in REPO_DEFAULTS.items():
@@ -236,8 +237,56 @@ def load_settings() -> dict:
             r["channel"] = "stable"
         if r["format"] not in FORMATS or (r["format"] == "idus") != is_idus(r):
             r["format"] = "idus" if is_idus(r) else "pacman"
-    s["repos"].sort(key=lambda r: 0 if r.get("group") == "Idus" else 1)  # Idus apps on top
+    if not s.get("custom_order"):
+        s["repos"].sort(key=lambda r: 0 if r.get("group") == "Idus" else 1)  # Idus apps on top
     return s
+
+
+def place_entry(repos: list, entry: dict, custom=False):
+    """Put a new repository in the list. Default order: Idus apps on top. Your own order:
+    right after the last one of its group (e.g. a new Idus app after your Idus apps), else last."""
+    if custom:
+        same = [i for i, r in enumerate(repos) if entry.get("group") and r.get("group") == entry["group"]]
+        repos.insert(same[-1] + 1 if same else len(repos), entry)
+    else:
+        repos.append(entry)
+        repos.sort(key=lambda r: 0 if r.get("group") == "Idus" else 1)
+
+
+def move_entry(key: str, target: str, after=False):
+    """Move repository `key` (owner/repo, lower case) before or after `target`, or to "top",
+    "bottom", "up" or "down". From then on your order is kept. → its new index, or None."""
+    with _lock:
+        repos = list(CFG["repos"])  # a new list: a job that is looping over the old one is not disturbed
+        i = next((n for n, r in enumerate(repos) if r["repo"].lower() == key), None)
+        if i is None or key == target:
+            return None
+        e = repos.pop(i)
+        if target == "top":
+            j = 0
+        elif target == "bottom":
+            j = len(repos)
+        elif target in ("up", "down"):
+            j = max(0, i - 1) if target == "up" else min(len(repos), i + 1)
+        else:
+            t = next((n for n, r in enumerate(repos) if r["repo"].lower() == target), None)
+            if t is None:
+                return None
+            j = t + 1 if after else t
+        repos.insert(j, e)
+        CFG["repos"] = repos
+        CFG["custom_order"] = True
+    save_settings()
+    return j
+
+
+def reset_order():
+    """Back to the default order: Idus apps, the Craft App Suite, then the ones you added."""
+    rank = {p["repo"].lower(): i for i, p in enumerate(PRESETS)}
+    with _lock:
+        CFG["repos"] = sorted(CFG["repos"], key=lambda r: rank.get(r["repo"].lower(), len(PRESETS)))
+        CFG["custom_order"] = False
+    save_settings()
 
 
 def save_settings():
@@ -1905,8 +1954,7 @@ def act_add(text: str, log, name=None, fmt=None, channel=None, archive=False):
     entry["format"] = "idus" if is_idus(entry) else (fmt or entry["format"])
     entry["channel"] = channel or entry["channel"]
     entry["archive"] = bool(archive)
-    CFG["repos"].append(entry)
-    CFG["repos"].sort(key=lambda r: 0 if r.get("group") == "Idus" else 1)
+    place_entry(CFG["repos"], entry, CFG.get("custom_order"))
     CFG["removed_presets"] = [x for x in CFG.get("removed_presets", []) if x.lower() != repo.lower()]
     save_settings()
     log(f"➕ added {repo}")
@@ -1961,8 +2009,7 @@ def restore_presets():
     have = {r["repo"].lower() for r in CFG["repos"]}
     for p in PRESETS:
         if p["repo"].lower() not in have:
-            CFG["repos"].append(dict(REPO_DEFAULTS, **p))
-    CFG["repos"].sort(key=lambda r: 0 if r.get("group") == "Idus" else 1)
+            place_entry(CFG["repos"], dict(REPO_DEFAULTS, **p), CFG.get("custom_order"))
     save_settings()
 
 
@@ -1999,6 +2046,10 @@ def cli():
     ap.add_argument("--add", metavar="OWNER/REPO", help="add a repository (a github.com link works too)")
     ap.add_argument("--name", help="with --add: display name")
     ap.add_argument("--remove", metavar="REPO", help="remove a repository from the list")
+    ap.add_argument("--move", nargs=2, metavar=("REPO", "WHERE"),
+                    help="move a repository in the list: top, bottom, up, down or a position (1 = top)")
+    ap.add_argument("--reset-order", action="store_true",
+                    help="back to the default order (Idus apps, Craft App Suite, then your own)")
     ap.add_argument("--remove-other", metavar="REPO",
                     help="remove copies of an app installed some other way (Flatpak, AUR, loose AppImage)")
     ap.add_argument("--offline", action="store_true", help="use cache + archive only")
@@ -2006,7 +2057,7 @@ def cli():
     ap.add_argument("-V", "--version", action="version", version=f"{APP_NAME} v{APP_VERSION} · {BUILD}")
     a = ap.parse_args()
     if not any([a.check, a.list, a.sync, a.update_all, a.install, a.uninstall, a.add, a.remove,
-                a.remove_other]):
+                a.remove_other, a.move, a.reset_order]):
         return False
     lines = []
     migrate_archive(print)
@@ -2028,6 +2079,24 @@ def cli():
         summary = f"Added {e['repo']}" if e else ""
     if a.remove and (e := need(a.remove)):
         act_remove(e, log)
+    if a.reset_order:
+        reset_order()
+        log("↕ default order restored")
+        print_table(log)
+    if a.move and (e := need(a.move[0])):
+        where = a.move[1].lower()
+        if where.isdigit():
+            n = max(1, min(int(where), len(CFG["repos"])))
+            others = [r for r in CFG["repos"] if r is not e]
+            where, after = (others[n - 2]["repo"].lower(), True) if n > 1 else ("top", False)
+        else:
+            after = False
+        if where not in ("top", "bottom", "up", "down") and not any(r["repo"].lower() == where for r in CFG["repos"]):
+            log(f"❌ --move: '{a.move[1]}' — use top, bottom, up, down or a position (1 = top)")
+        else:
+            j = move_entry(e["repo"].lower(), where, after)
+            log(f"↕ {e['name']} is number {j + 1 if j is not None else '?'} in the list")
+            print_table(log)
     if a.remove_other and (e := need(a.remove_other)):
         n = act_remove_other(e, log)
         summary = f"{e['name']}: removed {n} other install(s)"
@@ -2068,7 +2137,7 @@ def gui():
     import traceback
     import gi
     gi.require_version("Gtk", "4.0")
-    from gi.repository import Gtk, Gio, GLib, Pango  # noqa: E402
+    from gi.repository import Gtk, Gdk, Gio, GLib, GObject, Pango  # noqa: E402
 
     S = 1.15
     V, H = Gtk.Orientation.VERTICAL, Gtk.Orientation.HORIZONTAL
@@ -2104,6 +2173,7 @@ def gui():
                 ("github", "🌐  Open on GitHub"), ("folder", "📂  Open archive folder"),
                 ("purge", "🧹  Delete archived files…"), ("other", "♻️  Remove the other install…"),
                 ("uninstall", "🗑  Uninstall…"),
+                ("top", "⏫  Move to top"), ("bottom", "⏬  Move to bottom"),
                 ("hide", "🙈  Hide"), ("remove", "✖  Remove from list…")]
 
         def __init__(self, win, entry):
@@ -2112,9 +2182,14 @@ def gui():
             self.row = Gtk.ListBoxRow(activatable=False, selectable=False)
             self.row.set_name(self.key)
             self.row.add_css_class("reporow")
-            box = Gtk.Box(orientation=V, spacing=sc(6))
-            margins(box, sc(9), sc(12))
-            self.row.set_child(box)
+            outer = Gtk.Box(orientation=H, spacing=sc(8))
+            margins(outer, sc(9), sc(12))
+            outer.set_margin_start(sc(6))
+            outer.append(self._grip())
+            box = Gtk.Box(orientation=V, spacing=sc(6), hexpand=True)
+            outer.append(box)
+            self.row.set_child(outer)
+            self._drop_target()
 
             l1 = Gtk.Box(orientation=H, spacing=sc(10))
             self.icon = Gtk.Image.new_from_icon_name("package-x-generic")
@@ -2190,6 +2265,67 @@ def gui():
             self.arch_chk.connect("toggled", self.on_archive)
             self.keep_spin.connect("value-changed", self.on_keep)
             self._quiet = False
+
+        # ---- drag to reorder: grab the dots on the left, drop on another row (above / below its middle)
+        def _grip(self):
+            """Nine small squares, 3 × 3 — muted, orange under the pointer (plain widgets + CSS)."""
+            grip = Gtk.Box(valign=Gtk.Align.CENTER)
+            grip.add_css_class("grip")
+            dots = Gtk.Grid(row_spacing=sc(2), column_spacing=sc(2), halign=Gtk.Align.CENTER,
+                            valign=Gtk.Align.CENTER)
+            dots.set_margin_start(sc(4))
+            dots.set_margin_end(sc(4))
+            dots.set_margin_top(sc(8))
+            dots.set_margin_bottom(sc(8))
+            for i in range(3):
+                for j in range(3):
+                    d = Gtk.Box()
+                    d.add_css_class("gripdot")
+                    dots.attach(d, i, j, 1, 1)
+            grip.append(dots)
+            grip.set_tooltip_text("Drag to move — or ⋯ › Move to top / bottom")
+            grip.set_cursor(Gdk.Cursor.new_from_name("grab"))
+            src = Gtk.DragSource(actions=Gdk.DragAction.MOVE)
+            src.connect("prepare", lambda _s, _x, _y: Gdk.ContentProvider.new_for_value(self.key))
+            src.connect("drag-begin", self._drag_begin)
+            src.connect("drag-end", lambda *_: (self.row.remove_css_class("dragging"), self.win.dnd_scroll(0)))
+            grip.add_controller(src)
+            return grip
+
+        def _drag_begin(self, src, _drag):
+            try:  # the row itself follows the pointer
+                src.set_icon(Gtk.WidgetPaintable.new(self.row).get_current_image(), sc(16), self.row.get_height() // 2)
+            except Exception:
+                pass
+            self.row.add_css_class("dragging")
+
+        def _drop_target(self):
+            tgt = Gtk.DropTarget.new(GObject.TYPE_STRING, Gdk.DragAction.MOVE)
+            tgt.connect("motion", self._drop_motion)
+            tgt.connect("leave", lambda *_: self._drop_mark(None))
+            tgt.connect("drop", self._drop)
+            self.row.add_controller(tgt)
+
+        def _after(self, y) -> bool:
+            return y > self.row.get_height() / 2
+
+        def _drop_mark(self, after):
+            self.row.remove_css_class("drop-before")
+            self.row.remove_css_class("drop-after")
+            if after is not None:
+                self.row.add_css_class("drop-after" if after else "drop-before")
+
+        def _drop_motion(self, _t, _x, y):
+            self._drop_mark(self._after(y))
+            return Gdk.DragAction.MOVE
+
+        def _drop(self, _t, value, _x, y):
+            self._drop_mark(None)
+            if not isinstance(value, str) or value == self.key:
+                return False
+            after = self._after(y)
+            GLib.idle_add(lambda: (self.win.move_repo(value, self.key, after), False)[1])
+            return True
 
         def load_entry(self):
             e = self.entry
@@ -2286,6 +2422,8 @@ def gui():
                          if is_idus(e) else "")
                 w.confirm(f"Uninstall {e['name']}?\n\nThe offline archive is kept.{extra}",
                           lambda: w.run_job(lambda log: act_uninstall(e, log)), "Uninstall")
+            elif key in ("top", "bottom"):
+                w.move_repo(self.key, key)
             elif key == "hide":
                 e["hidden"] = not e.get("hidden")
                 save_settings()
@@ -2431,6 +2569,12 @@ def gui():
             ls = Gtk.ScrolledWindow(vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER)
             ls.set_min_content_height(sc(190))  # at least one full row; the window scrolls below that
             ls.set_child(self.listbox)
+            self._ls, self._scroll_dir, self._scroll_id = ls, 0, None
+            dm = Gtk.DropControllerMotion()
+            dm.connect("motion", lambda _c, _x, y: self.dnd_scroll(
+                -1 if y < sc(56) else 1 if y > ls.get_height() - sc(56) else 0))
+            dm.connect("leave", lambda *_: self.dnd_scroll(0))
+            ls.add_controller(dm)
             margins(ls, sc(6))
             self._frame(root, "1 · Repositories", ls, vexpand=True)
 
@@ -2581,6 +2725,32 @@ def gui():
                 self.listbox.append(r.row)
             self.refresh_rows()
             self.load_icons()
+
+        def move_repo(self, key, target, after=False):
+            """Move a repository (drag and drop, or ⋯ › Move to top / bottom) — saved at once."""
+            self.dnd_scroll(0)
+            j = move_entry(key, target, after)
+            r = self.rows.get(key)
+            if j is None or not r:
+                return
+            self.listbox.remove(r.row)  # the rows are in the same order as CFG["repos"]
+            self.listbox.insert(r.row, j)
+            self.log(f"↕ {r.entry['name']} moved to number {j + 1} — your order is kept "
+                     "(Settings › Reset order brings back the default)")
+
+        def dnd_scroll(self, direction):
+            """Scroll the list while a dragged row is held near its top or bottom edge."""
+            self._scroll_dir = direction
+            if direction and not self._scroll_id:
+                self._scroll_id = GLib.timeout_add(30, self._scroll_tick)
+
+        def _scroll_tick(self):
+            if not self._scroll_dir:
+                self._scroll_id = None
+                return False
+            adj = self._ls.get_vadjustment()
+            adj.set_value(adj.get_value() + self._scroll_dir * sc(14))
+            return True
 
         def refresh_rows(self, rows=None):
             rows = list(self.rows.values()) if rows is None else rows
@@ -2918,6 +3088,22 @@ def gui():
                 d.close()
                 self.rebuild_rows()
 
+            ob = Gtk.Button(label="↕  Reset order", halign=Gtk.Align.START)
+            ob.set_sensitive(bool(CFG.get("custom_order")))
+            g.attach(label("Order", "field", valign=Gtk.Align.CENTER), 0, row, 1, 1)
+            g.attach(ob, 1, row, 2, 1)
+            g.attach(label("Drag the dots on the left of a repository to move it, or use ⋯ › Move to top / "
+                           "bottom. Reset brings back the default: Idus apps, Craft App Suite, then your own.",
+                           "dlg-help", wrap=True), 1, row + 1, 2, 1)
+            row += 2
+
+            def reset():
+                reset_order()
+                self.log("↕ default order restored")
+                ob.set_sensitive(False)
+                self.rebuild_rows()
+            ob.connect("clicked", lambda _b: reset())
+
             def restore():
                 restore_presets()
                 self.log("· default repositories restored")
@@ -3000,6 +3186,13 @@ def gui():
             list.repolist > row.reporow {{ background-color: #232833; border-radius: {sc(10)}px;
                                            border: 1px solid {C['line']}; margin: {sc(3)}px {sc(2)}px; }}
             list.repolist > row.reporow:hover {{ background-color: #262c38; }}
+            list.repolist > row.reporow.dragging {{ opacity: 0.45; }}
+            .grip {{ border-radius: {sc(6)}px; }}
+            .grip:hover {{ background-color: #2a303c; }}
+            .gripdot {{ min-width: {sc(3)}px; min-height: {sc(3)}px; background-color: {C['dim']}; }}
+            .grip:hover .gripdot {{ background-color: {C['accent']}; }}
+            list.repolist > row.reporow.drop-before {{ box-shadow: inset 0 {sc(3)}px 0 0 {C['accent']}; }}
+            list.repolist > row.reporow.drop-after {{ box-shadow: inset 0 -{sc(3)}px 0 0 {C['accent']}; }}
             .repo-name {{ font-size: {int(15*S)}px; font-weight: 600; color: {C['fg']}; }}
             .repo-sub {{ font-size: {int(11*S)}px; color: {C['muted']}; }}
             .repo-sub link {{ color: {C['soft']}; }}

@@ -71,6 +71,11 @@ don't want can go: **⋯ › Hide** keeps it out of sight (Settings › *Show hi
 brings it back), **⋯ › Remove from list…** takes it off, and Settings › *Restore default
 repositories* puts removed ones back. Add any other repository with **Add repository…**.
 
+**Your own order:** drag the nine dots on the left of a repository up or down (the list scrolls
+when you hold it near the edge), or use **⋯ › Move to top / Move to bottom**. The order is saved
+at once and kept; new Idus apps land after your other Idus apps. Settings › *Reset order* brings
+back the default: Idus apps, the Craft App Suite, then the ones you added.
+
 **Idus apps**
 
 | App | What it is |
@@ -216,11 +221,12 @@ The AppImage format needs no password at all.
 | | ⋯ › Delete archived files… / Uninstall… | The archive and the install are separate — removing one keeps the other |
 | | ⋯ › Remove the other install… | Removes a copy installed another way (Flatpak, AUR, loose AppImage); yours stays |
 | | ⋯ › Hide / Remove from list… | Hide keeps the app's settings; Remove takes it off the list |
+| | ⠿ dots on the left / ⋯ › Move to top · bottom | Your own order — drag a repository where you want it |
 | Actions | Check for updates | Asks GitHub for new releases (and syncs the archive if that's on) |
 | | Update all | Installs every update — all pacman packages in one password prompt |
 | | Sync archive | Downloads missing archive versions, prunes old ones |
 | | Add repository… | `owner/repo` or any github.com link |
-| | Settings… | Folders, versions to keep, what to archive, checks, notifications, token |
+| | Settings… | Folders, versions to keep, what to archive, checks, notifications, token, reset order |
 
 The filter at the top shows All · Installed · Updates · Archived · Not installed.
 
@@ -233,6 +239,7 @@ idus-github-updater --check | --list | --sync | --update-all \
                     --install REPO [--tag TAG] [--format pacman|appimage] [--pin] \
                     --uninstall REPO | --remove-other REPO \
                     --add OWNER/REPO [--name NAME] | --remove REPO \
+                    --move REPO top|bottom|up|down|N | --reset-order \
                     [--offline] [--notify]
 ```
 

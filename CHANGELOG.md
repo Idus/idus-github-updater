@@ -4,9 +4,14 @@ All notable changes to Idus GitHub Updater are documented here. The format is ba
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.2] – 2026-11-12
+## [1.5] – 2026-11-12
 
 ### Added
+- **Your own order of the repositories.** Drag the nine dots on the left of a row up or down — an
+  orange line shows where it lands, and the list scrolls when you hold it near the edge. Or use
+  **⋯ › Move to top / Move to bottom**. The order is saved at once and kept; new Idus apps land
+  after your other Idus apps. Settings › *Reset order* brings back the default.
+- CLI: `--move REPO top|bottom|up|down|N` and `--reset-order`.
 - **Idus SC Deck** in the list of Idus apps — Star Citizen keys for OpenDeck. The updater runs
   its installer and reads the installed version from the plugin's `manifest.json` in OpenDeck's
   plugin folder (native or Flatpak). Quit OpenDeck from its tray icon and start it again after
