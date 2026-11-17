@@ -4,6 +4,13 @@ All notable changes to Idus GitHub Updater are documented here. The format is ba
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] – 2026-11-17
+
+### Added
+- **Idus Hamster Wheel** in the list of Idus apps — an OpenDeck key that keeps the computer awake
+  while you are away. Installed and updated like Idus SC Deck: the version is read from the
+  plugin's `manifest.json`; quit OpenDeck from its tray icon and start it again after an update.
+
 ## [1.5] – 2026-11-12
 
 ### Added

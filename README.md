@@ -83,6 +83,7 @@ back the default: Idus apps, the Craft App Suite, then the ones you added.
 | [Idus GitHub Updater](https://github.com/Idus/idus-github-updater) | This app — it keeps itself up to date too |
 | [Idus SC Toolbox](https://github.com/Idus/idus-sc-toolbox) | One-click fixes for Star Citizen on Linux (LUG Helper companion) |
 | [Idus SC Deck](https://github.com/Idus/idus-sc-deck) | Star Citizen keys for OpenDeck (Stream Deck on Linux) — restart OpenDeck after an update |
+| [Idus Hamster Wheel](https://github.com/Idus/idus-hamster-wheel) | An OpenDeck key that keeps the computer awake while you are away — restart OpenDeck after an update |
 | [Idus Elgato Light](https://github.com/Idus/idus-elgato-light) | Elgato Key Light, Ring Light and Light Strip control on Linux, with OpenDeck shortcuts |
 | [Idus HW-player](https://github.com/Idus/idus-hw-player) | Random Halloween videos on a Raspberry Pi + projector — *archive only* here |
 
