@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ─────────────────────────────────────────────────────────────────────────────
-#  Idus GitHub Updater  ·  v1.5.1  ·  build 2026-11-17
+#  Idus GitHub Updater  ·  v1.5.2  ·  build 2026-11-17
 #  (bump APP_VERSION + BUILD below and this line together on every update)
 # ─────────────────────────────────────────────────────────────────────────────
 """
@@ -56,7 +56,7 @@ from pathlib import Path
 APP_NAME = "Idus GitHub Updater"
 APP_SLUG = "idus-github-updater"
 APP_ID = "se.wolfpack.idusgithubupdater"
-APP_VERSION = "1.5.1"
+APP_VERSION = "1.5.2"
 BUILD = "2026-11-17"  # keep in sync with the header comment at the top of this file
 REPO_URL = "https://github.com/Idus/idus-github-updater"
 KOFI_URL = "https://ko-fi.com/N4N2QZHKK"
@@ -235,6 +235,8 @@ def load_settings() -> dict:
         if preset:
             for k in PRESET_KEYS:
                 r[k] = preset.get(k, REPO_DEFAULTS[k])
+            if r["name"] == r["repo"].split("/")[-1]:  # added by hand before it was a preset: use its real name
+                r["name"] = preset["name"]
         if r["channel"] not in CHANNELS:
             r["channel"] = "stable"
         if r["format"] not in FORMATS or (r["format"] == "idus") != is_idus(r):
@@ -2846,8 +2848,14 @@ def gui():
                 for r in rows:
                     e = r.entry
                     url = e.get("icon") or f"https://github.com/{e['repo'].split('/')[0]}.png?size=64"
-                    p = CACHE_DIR / "icons" / (re.sub(r"[^a-z0-9]+", "-", r.key) + ".img")
-                    if not p.exists() or time.time() - p.stat().st_mtime > 30 * 86400:
+                    # one file per repo AND icon address (a new address = a new icon at once);
+                    # refreshed daily, so a changed picture shows up the next day
+                    base = re.sub(r"[^a-z0-9]+", "-", r.key)
+                    p = CACHE_DIR / "icons" / f"{base}-{hashlib.sha1(url.encode()).hexdigest()[:8]}.img"
+                    for old in p.parent.glob(f"{base}*.img") if p.parent.exists() else []:
+                        if old != p and re.fullmatch(re.escape(base) + r"(-[0-9a-f]{8})?\.img", old.name):
+                            old.unlink(missing_ok=True)
+                    if not p.exists() or time.time() - p.stat().st_mtime > 86400:
                         try:
                             code, _h, resp = _request(url, timeout=10)
                             with resp:

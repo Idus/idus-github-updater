@@ -4,6 +4,14 @@ All notable changes to Idus GitHub Updater are documented here. The format is ba
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] – 2026-11-17
+
+### Fixed
+- An app you added by hand before it became one of the Idus apps (like Idus SC Deck) now gets its
+  real name and icon instead of the repository name and the owner's avatar.
+- Icons are fetched again when their address changes, and refreshed daily (was every 30 days), so a
+  new app icon shows up without clearing the cache.
+
 ## [1.5.1] – 2026-11-17
 
 ### Added
