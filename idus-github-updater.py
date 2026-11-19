@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ─────────────────────────────────────────────────────────────────────────────
-#  Idus GitHub Updater  ·  v1.5.2  ·  build 2026-11-17
+#  Idus GitHub Updater  ·  v1.5.3  ·  build 2026-11-19
 #  (bump APP_VERSION + BUILD below and this line together on every update)
 # ─────────────────────────────────────────────────────────────────────────────
 """
@@ -56,8 +56,8 @@ from pathlib import Path
 APP_NAME = "Idus GitHub Updater"
 APP_SLUG = "idus-github-updater"
 APP_ID = "se.wolfpack.idusgithubupdater"
-APP_VERSION = "1.5.2"
-BUILD = "2026-11-17"  # keep in sync with the header comment at the top of this file
+APP_VERSION = "1.5.3"
+BUILD = "2026-11-19"  # keep in sync with the header comment at the top of this file
 REPO_URL = "https://github.com/Idus/idus-github-updater"
 KOFI_URL = "https://ko-fi.com/N4N2QZHKK"
 
@@ -96,6 +96,8 @@ IDUS_APPS = [
                                       "about": "OpenDeck plugin — restart OpenDeck after an update"}),
     ("idus-hamster-wheel", "Idus Hamster Wheel", {"opendeck_plugin": "se.wolfpack.idushamsterwheel",
                                                   "about": "OpenDeck plugin — restart OpenDeck after an update"}),
+    ("idus-button-box", "Idus Button Box", {"opendeck_plugin": "se.wolfpack.idusbuttonbox",
+                                            "about": "OpenDeck plugin — restart OpenDeck after an update"}),
     ("idus-elgato-light", "Idus Elgato Light", {}),
     ("idus-hw-player", "Idus HW-player", {"archive_only": True,
                                           "about": "Raspberry Pi app — archived here, installed on the Pi"}),

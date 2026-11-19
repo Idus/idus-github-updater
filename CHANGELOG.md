@@ -4,6 +4,13 @@ All notable changes to Idus GitHub Updater are documented here. The format is ba
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3] – 2026-11-19
+
+### Added
+- **Idus Button Box** in the list of Idus apps — Stream Deck keys as joystick buttons (a virtual
+  button box). Installed and updated like the other OpenDeck plugins: the version is read from the
+  plugin's `manifest.json`; quit OpenDeck from its tray icon and start it again after an update.
+
 ## [1.5.2] – 2026-11-17
 
 ### Fixed
